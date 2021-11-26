@@ -5,6 +5,9 @@ div.obsidian-repl {
 	padding: 0;
 	border: 0;
 	user-select: text;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	word-wrap: :normal;
 }
 
 
@@ -38,6 +41,7 @@ div.obsidian-repl {
 .repl-result-error {
 	border-bottom: 1px solid #222;
 	padding-bottom: 2px;
+	word-wrap: break-word;
 }
 
 .repl-result-text {
@@ -115,7 +119,7 @@ div.obsidian-repl {
 .repl-result-error-inner {
 	display: inline;
 	vertical-align: top;
-	word-wrap: break-word;
+	word-break: break-word;
 	font-family: var(--font-monospace);
 }
 

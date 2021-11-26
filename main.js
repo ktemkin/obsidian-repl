@@ -224,6 +224,12 @@ const jsrepl = {};
         this.editArea.focus();
         this.log = new jsrepl.log(this);
         this.hookConsole();
+
+        // Subscribe to all error messages.
+        window.addEventListener('error', (e) => {
+            repl.logError(e.message, e.filename, e.lineno, e.colno, e.error);
+            return true;
+        });
     };
 
     repl.format = function(args) {
@@ -260,8 +266,8 @@ const jsrepl = {};
         window.coreWarn.apply(window.console, arguments);
     };
 
-    repl.doError = function () {
-        const resultText = h("div.repl-console-error-inner", repl.format(arguments));
+    repl.logErrorInternal = function(message) {
+        const resultText = h("div.repl-console-error-inner", message);
 
         const elem = h(
             "div.repl-console-error",
@@ -270,17 +276,37 @@ const jsrepl = {};
         );
 
         window.repl.logArea.appendChild(elem);
+    }
+
+    repl.doError = function () {
+        repl.logErrorInternal(repl.format(arguments));
         window.coreError.apply(window.console, arguments);
+    };
+    
+    repl.logError = function (msg, url, line, column, err) {
+
+        // Capacitor's error messaging doesn't repeat itself,
+        // so we'll have to output everything.
+        if (app.isMobile) {
+            repl.logErrorInternal(`${msg} (${url}:${line}:${column})\n\n${err.stack}`);
+        } 
+        // Electron, on the other hand, gives us a nice, full message in the stack.
+        else {
+            repl.logErrorInternal(err.stack);
+        }
     };
 
     repl.prototype.hookConsole = function () {
-        window.coreLog = window.console.log;
-        window.coreWarn = window.console.warn;
-        window.coreError = window.console.error;
-        window.console.log = repl.doLogging;
-        window.console.warn = repl.doWarning;
-        window.console.error = repl.doError;
-        window.console.info = repl.doLogging;
+        if (!window.coreLog) {
+            window.coreLog = window.console.log;
+            window.coreWarn = window.console.warn;
+            window.coreError = window.console.error;
+            window.coreOnError = window.onerror;
+            window.console.log = repl.doLogging;
+            window.console.warn = repl.doWarning;
+            window.console.error = repl.doError;
+            window.console.info = repl.doLogging;
+        }
     };
 
     repl.prototype.generateErrorForTesting = function () {
@@ -326,8 +352,6 @@ const jsrepl = {};
                 style: {
                     width: this.width,
                     height: this.height,
-                    // "overflow-x": "visible",
-                    // "overflow-y": "auto"},
                 },
                 ontouchstart: (e) => this.onTouchStart(e),
                 ontouchend:   (e) => this.onTouchEnd(e)
