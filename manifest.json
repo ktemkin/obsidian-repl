@@ -1,0 +1,10 @@
+{
+    "id": "obsidian-repl",
+    "name": "REPL",
+    "version": "0.0.1",
+    "minAppVersion": "0.11.0",
+    "description": "Quick hack to make iOS debugging (and maybe more?) easier.",
+    "author": "Kate Temkin",
+    "authorUrl": "",
+    "isDesktopOnly": false
+}

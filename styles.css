@@ -1,0 +1,152 @@
+div.obsidian-repl {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	user-select: text;
+}
+
+
+/** mobile phones */
+@supports (-webkit-touch-callout: none) {
+	div.repl-viewport {
+		/* Per iOS style guides, this should be here. */
+		padding-bottom: 60pt;
+		user-select: all;
+	}
+}
+
+.repl-prompt {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 8px;
+	font-family: var(--font-monospace);
+	color: var(--text-accent);
+	user-select: none;
+}
+
+.repl-edit-area {
+    display: inline-block;
+    vertical-align: top;
+	font-family: var(--font-monospace);
+    width: 100%;
+}
+
+.repl-console-warning,
+.repl-console-error,
+.repl-result-error {
+	border-bottom: 1px solid #222;
+	padding-bottom: 2px;
+}
+
+.repl-result-text {
+	color: var(--text-accent);
+    line-height: normal;
+	display: inline;
+	vertical-align: top;
+	word-wrap: break-word;
+	font-family: var(--font-monospace);
+}
+
+.repl-log-code {
+	width: 100%;
+	display: flex;
+}
+
+.repl-log-output {
+	width: 100%;
+	vertical-align: top;
+	word-wrap: break-word;
+	font-family: var(--font-monospace);
+}
+
+.repl-log-prompt {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 8px;
+    font-family: var(--font-monospace);
+	user-select: none;
+}
+
+.repl-console-prompt,
+.repl-result-prompt {
+	color: var(--text-faint);
+
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 8px;
+    font-family: var(--font-monospace);
+	user-select: none;
+}
+
+.repl-console-warning .repl-console-prompt,
+.repl-result-error .repl-result-prompt,
+.repl-console-error .repl-console-prompt {
+	opacity: 50%;
+}
+
+.repl-code-text {
+	display: inline-block;
+	vertical-align: top;
+	font-family: var(--font-monospace);
+}
+
+.repl-console-log {
+	border-bottom: 1px solid #222;
+}
+
+.repl-result {
+	width: 100%;
+	display: flex;
+}
+
+.repl-console-error,
+.repl-console-warning,
+.repl-result-error {
+	font-family: var(--font-monospace);
+	display: flex;
+}
+
+
+.repl-result-text,
+.repl-console-warning-inner,
+.repl-console-error-inner,
+.repl-result-error-inner {
+	display: inline;
+	vertical-align: top;
+	word-wrap: break-word;
+	font-family: var(--font-monospace);
+}
+
+.repl-console-error,
+.repl-result-error {
+	color: rgb(239, 135, 132);
+	background-color: rgb(37, 2, 1);
+	border-top: 1px solid rgb(84, 12, 6);
+	border-bottom: 1px solid rgb(84, 12, 6);
+}
+
+.repl-console-warning,
+.repl-result-warning,
+.repl-result-warning-inner {
+	color: rgb(246, 218, 162);
+	background-color: rgb(50, 43, 8);
+	border-top: 1px solid rgb(99, 85, 23);
+	border-bottom: 1px solid rgb(99, 85, 23);
+}
+
+.repl-result-error .repl-result-prompt,
+.repl-console-error .repl-console-prompt,
+.repl-console-warning .repl-console-prompt {
+	margin-left: 6px;
+	margin-top: 2px;
+}
+
+.repl-inner-result {
+	margin: 0px;
+}
+
+.repl-inner-result a {
+	font-size: 10px;
+}
