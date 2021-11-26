@@ -196,7 +196,6 @@ const jsrepl = {};
         this.root = root;
         this.width = root.width;
         this.height = root.height;
-        this.initialHeight = document.body.clientHeight;
         this.container = root.parentElement;
 
         this.view = null;
@@ -219,11 +218,17 @@ const jsrepl = {};
         this.createView();
         this.isClearing = false;
 
+        this.showingLogs     = true;
+        this.showingWarnings = true;
+        this.showingErrors   = true;
+        this.activeFilter    = null;
+
         this.history = new jsrepl.history();
 
         this.editArea.focus();
         this.log = new jsrepl.log(this);
         this.hookConsole();
+        this.extendConsole();
 
         // Subscribe to all error messages.
         window.addEventListener('error', (e) => {
@@ -284,7 +289,6 @@ const jsrepl = {};
     };
     
     repl.logError = function (msg, url, line, column, err) {
-
         // Capacitor's error messaging doesn't repeat itself,
         // so we'll have to output everything.
         if (app.isMobile) {
@@ -295,7 +299,7 @@ const jsrepl = {};
             repl.logErrorInternal(err.stack);
         }
     };
-
+    
     repl.prototype.hookConsole = function () {
         if (!window.coreLog) {
             window.coreLog = window.console.log;
@@ -506,6 +510,110 @@ const jsrepl = {};
 
         return [result, isError];
     };
+
+    repl.prototype._setVisibilityBySelector = function (selector, should_show, root) {
+        root = root || this.root
+        let elements = root.querySelectorAll(selector);
+
+        for (let element of elements) {
+            if (should_show) {
+                element.style.height = "auto";
+                element.style.visibility = "visible";
+            } else {
+                element.style.height = "0px";
+                element.style.visibility = "hidden";
+            }
+        }
+    }
+
+    
+    repl.prototype._filterBySelectorAndContents =
+    function (selector, keyword, root) {
+        root = root || this.root
+        let elements = root.querySelectorAll(selector);
+
+        for (let element of elements) {
+            window.coreLog(element.innerText);
+            if (element.innerText.contains(keyword)) {
+                element.style.height = "auto";
+                element.style.visibility = "visible";
+            } else {
+                element.style.height = "0px";
+                element.style.visibility = "hidden";
+            }
+        }
+    }
+    
+    
+    repl.prototype.showErrors = function (should_show, root) {
+        this.showingErrors = should_show;
+        this._setVisibilityBySelector(".repl-console-error", should_show, root);
+        this._setVisibilityBySelector(".repl-result-error", should_show, root);
+    };
+    
+    repl.prototype.showWarnings = function (should_show, root) {
+        this.showingWarnings = should_show;
+        this._setVisibilityBySelector(".repl-console-warning", should_show, root);
+        this._setVisibilityBySelector(".repl-result-warning", should_show, root);
+    };
+
+    repl.prototype.showLogs = function (should_show, root) {
+        this.showingLogs = should_show;
+        this._setVisibilityBySelector(".repl-console-log", should_show, root);
+    };
+    
+    repl.prototype.showInfo = function (should_show, root) {
+        this.showLogs(should_show, root);
+    };
+
+    repl.prototype.showResults = function (should_show, root) {
+        this.showingResults = should_show;
+        this._setVisibilityBySelector(".repl-log-code", should_show, root);
+    };
+
+    repl.prototype.filterView = function (keyword, root) {
+        if (keyword === null) {
+            this.unfilterView();
+            return;
+        }
+
+        this.activeFilter = keyword;
+        this._filterBySelectorAndContents(".repl-console-warning", keyword, root);
+        this._filterBySelectorAndContents(".repl-result-warning", keyword, root);
+        this._filterBySelectorAndContents(".repl-console-log", keyword, root);
+        this._filterBySelectorAndContents(".repl-console-log", keyword, root);
+        this._filterBySelectorAndContents(".repl-log-result", keyword, root);
+        this._filterBySelectorAndContents(".repl-log-code", keyword, root);
+    }
+    
+    repl.prototype.unfilterView = function (root) {
+        this.activeFilter = null;
+        this._setVisibilityBySelector(".repl-console-warning", true, root);
+        this._setVisibilityBySelector(".repl-result-warning", true, root);
+        this._setVisibilityBySelector(".repl-console-log", true, root);
+        this._setVisibilityBySelector(".repl-console-log", true, root);
+        this._setVisibilityBySelector(".repl-log-result", true, root);
+        this._setVisibilityBySelector(".repl-log-code", true, root);
+    };
+
+    repl.prototype.applyCurrentFiltersTo = function(newElement) {
+        this.showLogs(this.showingLogs, newElement);
+        this.showWarnings(this.showingWarnings, newElement);
+        this.showErrors(this.showingErrors, newElement);
+        this.showResults(this.showingResults, newElement);
+        this.filterView(this.activeFilter, newElement);
+    }
+
+    repl.prototype.extendConsole = function () {
+        console.showErrors   = this.showErrors.bind(this);
+        console.showWarnings = this.showWarnings.bind(this);
+        console.showLogs     = this.showLogs.bind(this);
+        console.showInfo     = this.showInfo.bind(this);
+        console.showResults  = this.showResults.bind(this);
+        console.filter       = this.filterView.bind(this);
+        console.unfilter     = this.unfilterView.bind(this);
+    }
+
 } // namespace boundary
 
 {
@@ -712,6 +820,9 @@ const jsrepl = {};
 
         this.processCode(code);
     };
+
+
+    
 } // namespace boundary
 
 {
@@ -736,6 +847,8 @@ const jsrepl = {};
             h("div.repl-result-prompt", jsrepl.config.prompt),
             h("div.repl-code-text", code)
         );
+
+        this.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -745,6 +858,8 @@ const jsrepl = {};
             { style: { width: this.width } },
             h("div.repl-log-output", content)
         );
+
+        this.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -762,6 +877,7 @@ const jsrepl = {};
             resultText
         );
 
+        this.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -775,6 +891,7 @@ const jsrepl = {};
             resultText
         );
 
+        this.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -788,8 +905,10 @@ const jsrepl = {};
             resultText
         );
 
+        this.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
+
 } // namespace boundary
 
 {
@@ -800,11 +919,17 @@ const jsrepl = {};
     };
 } // namespace boundary
 
-// tiny hack
+
+
+/**
+ * Hacked-on utility functions for the console.
+ */
+
 window.clear = function () {
     repl.logArea.innerHTML = "";
     repl.isClearing = true;
 };
+
 
 /**
  * Start Obsidian plugin.
@@ -849,7 +974,7 @@ class ObsidianRepl extends obsidian.Plugin {
         this.registerView(VIEW_TYPE_REPL, (leaf) => new ReplView(leaf));
 
         // FIXME: remove
-        this.addRibbonIcon("feather-terminal", "Activate view", () => {
+        this.addRibbonIcon("feather-terminal", "Open Console", () => {
             this.activateView();
         });
     }
