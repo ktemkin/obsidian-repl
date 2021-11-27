@@ -51,6 +51,7 @@ div.obsidian-repl {
 	vertical-align: top;
 	word-wrap: break-word;
 	font-family: var(--font-monospace);
+	margin-top: 6px;
 }
 
 .repl-log-code {
@@ -100,9 +101,15 @@ div.obsidian-repl {
 	border-bottom: 1px solid #222;
 }
 
-.repl-result {
+.repl-result,
+.repl-result-undefined {
 	width: 100%;
 	display: flex;
+}
+
+.repl-result-undefined .repl-result-text {
+	font-style: italic;
+	color: var(--text-faint);
 }
 
 .repl-console-error,
@@ -140,6 +147,8 @@ div.obsidian-repl {
 	border-bottom: 1px solid rgb(99, 85, 23);
 }
 
+.repl-result .repl-result-prompt,
+.repl-result-undefined .repl-result-prompt,
 .repl-result-error .repl-result-prompt,
 .repl-console-error .repl-console-prompt,
 .repl-console-warning .repl-console-prompt {

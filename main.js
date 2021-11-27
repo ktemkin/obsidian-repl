@@ -218,10 +218,12 @@ const jsrepl = {};
         this.createView();
         this.isClearing = false;
 
-        this.showingLogs     = true;
-        this.showingWarnings = true;
-        this.showingErrors   = true;
-        this.activeFilter    = null;
+        this.showingLogs       = true;
+        this.showingWarnings   = true;
+        this.showingErrors     = true;
+        this.showingResults    = true;
+        this.showingUndefineds = false;
+        this.activeFilter      = null;
 
         this.history = new jsrepl.history();
 
@@ -244,9 +246,7 @@ const jsrepl = {};
         // Search for replacement patterns for each argument.
         for (let i = 1; i < args.length; ++i) {
             let replacement = args[i];
-            window.coreLog(formatString)
             formatString = formatString.replace(formatPattern, replacement);
-            window.coreLog(formatString)
         }
 
         return formatString;
@@ -281,6 +281,7 @@ const jsrepl = {};
         );
 
         window.repl.logArea.appendChild(elem);
+        window.repl.applyCurrentFiltersTo(elem);
     }
 
     repl.doError = function () {
@@ -400,7 +401,6 @@ const jsrepl = {};
 
     repl.prototype.printAsObject = function (obj) {
         return typeof obj === "object";
-        //return toString(singleResult).startsWith("[object");
     };
 
     repl.prototype.escapeHTML = function(text) {
@@ -485,26 +485,23 @@ const jsrepl = {};
     }
 
     repl.prototype.evalCode = function (code) {
-        let result = "";
+        let result;
         let isError = false;
 
         code = this.demangleCode(code);
 
         try {
-            let singleResult = eval(code);
+            result = eval(code);
 
-            if (this.printAsObject(singleResult)) {
+            if (this.printAsObject(result)) {
                 // FIXME: do pathToObject sanely
-                singleResult = this.formatObject(singleResult, code);
-            } else {
-                singleResult = this.escapeHTML(singleResult)
+                result = this.formatObject(result, code);
+            } else if (result) {
+                result = this.escapeHTML(result) 
             }
 
-            if (singleResult !== undefined) {
-                result += singleResult;
-            }
         } catch (e) {
-            result += this.generateStackTrace(e);
+            result  = this.generateStackTrace(e);
             isError = true;
         }
 
@@ -514,7 +511,7 @@ const jsrepl = {};
     repl.prototype._setVisibilityBySelector = function (selector, should_show, root) {
         root = root || this.root
         let elements = root.querySelectorAll(selector);
-
+        
         for (let element of elements) {
             if (should_show) {
                 element.style.height = "auto";
@@ -522,18 +519,18 @@ const jsrepl = {};
             } else {
                 element.style.height = "0px";
                 element.style.visibility = "hidden";
+                window.coreLog(element);
             }
         }
     }
 
     
     repl.prototype._filterBySelectorAndContents =
-    function (selector, keyword, root) {
+    function (selector, keyword, root, includePrevious) {
         root = root || this.root
         let elements = root.querySelectorAll(selector);
 
         for (let element of elements) {
-            window.coreLog(element.innerText);
             if (element.innerText.contains(keyword)) {
                 element.style.height = "auto";
                 element.style.visibility = "visible";
@@ -544,31 +541,57 @@ const jsrepl = {};
         }
     }
     
+    repl.prototype.defaultToTrue = function(value) {
+        if (value === undefined) {
+            return true;
+        }
+
+        return value;
+    }
     
     repl.prototype.showErrors = function (should_show, root) {
+        should_show = this.defaultToTrue(should_show);
+
         this.showingErrors = should_show;
         this._setVisibilityBySelector(".repl-console-error", should_show, root);
-        this._setVisibilityBySelector(".repl-result-error", should_show, root);
+        this.scrollDown();
     };
     
     repl.prototype.showWarnings = function (should_show, root) {
+        should_show = this.defaultToTrue(should_show);
+
         this.showingWarnings = should_show;
         this._setVisibilityBySelector(".repl-console-warning", should_show, root);
-        this._setVisibilityBySelector(".repl-result-warning", should_show, root);
+        this.scrollDown();
     };
 
     repl.prototype.showLogs = function (should_show, root) {
+        should_show = this.defaultToTrue(should_show);
+
         this.showingLogs = should_show;
         this._setVisibilityBySelector(".repl-console-log", should_show, root);
+        this.scrollDown();
+    };
+    
+    repl.prototype.showUndefineds = function (should_show, root) {
+        should_show = this.defaultToTrue(should_show);
+
+        this.showingUndefineds = should_show;
+        this._setVisibilityBySelector(".repl-result-undefined", should_show, root);
+        this.scrollDown();
     };
     
     repl.prototype.showInfo = function (should_show, root) {
         this.showLogs(should_show, root);
+        this.scrollDown();
     };
 
     repl.prototype.showResults = function (should_show, root) {
+        should_show = this.defaultToTrue(should_show);
+
         this.showingResults = should_show;
         this._setVisibilityBySelector(".repl-log-code", should_show, root);
+        this.scrollDown();
     };
 
     repl.prototype.filterView = function (keyword, root) {
@@ -578,40 +601,54 @@ const jsrepl = {};
         }
 
         this.activeFilter = keyword;
+        this._filterBySelectorAndContents(".repl-console-error", keyword, root);
+        this._filterBySelectorAndContents(".repl-result-error", keyword, root);
         this._filterBySelectorAndContents(".repl-console-warning", keyword, root);
         this._filterBySelectorAndContents(".repl-result-warning", keyword, root);
         this._filterBySelectorAndContents(".repl-console-log", keyword, root);
         this._filterBySelectorAndContents(".repl-console-log", keyword, root);
         this._filterBySelectorAndContents(".repl-log-result", keyword, root);
         this._filterBySelectorAndContents(".repl-log-code", keyword, root);
+        this.scrollDown();
     }
     
     repl.prototype.unfilterView = function (root) {
         this.activeFilter = null;
+        this._setVisibilityBySelector(".repl-console-error", true, root);
+        this._setVisibilityBySelector(".repl-result-error", true, root);
         this._setVisibilityBySelector(".repl-console-warning", true, root);
         this._setVisibilityBySelector(".repl-result-warning", true, root);
         this._setVisibilityBySelector(".repl-console-log", true, root);
         this._setVisibilityBySelector(".repl-console-log", true, root);
         this._setVisibilityBySelector(".repl-log-result", true, root);
         this._setVisibilityBySelector(".repl-log-code", true, root);
+        this.scrollDown();
     };
 
     repl.prototype.applyCurrentFiltersTo = function(newElement) {
+
+        // TODO: expand the behavior of this
+        newElement = this.root;
+
+        this.filterView(this.activeFilter, newElement);
         this.showLogs(this.showingLogs, newElement);
         this.showWarnings(this.showingWarnings, newElement);
         this.showErrors(this.showingErrors, newElement);
         this.showResults(this.showingResults, newElement);
-        this.filterView(this.activeFilter, newElement);
-    }
+        this.showUndefineds(this.showingUndefineds, newElement);
+    };
 
     repl.prototype.extendConsole = function () {
-        console.showErrors   = this.showErrors.bind(this);
-        console.showWarnings = this.showWarnings.bind(this);
-        console.showLogs     = this.showLogs.bind(this);
-        console.showInfo     = this.showInfo.bind(this);
-        console.showResults  = this.showResults.bind(this);
-        console.filter       = this.filterView.bind(this);
-        console.unfilter     = this.unfilterView.bind(this);
+        console.showUndefineds = this.showUndefineds.bind(this);
+        console.showUndefs     = this.showUndefineds.bind(this);
+        console.showErrors     = this.showErrors.bind(this);
+        console.showWarnings   = this.showWarnings.bind(this);
+        console.showLogs       = this.showLogs.bind(this);
+        console.showInfo       = this.showInfo.bind(this);
+        console.showInfos      = this.showInfo.bind(this);
+        console.showResults    = this.showResults.bind(this);
+        console.filter         = this.filterView.bind(this);
+        console.unfilter       = this.unfilterView.bind(this);
     }
 
 } // namespace boundary
@@ -848,7 +885,7 @@ const jsrepl = {};
             h("div.repl-code-text", code)
         );
 
-        this.applyCurrentFiltersTo(elem);
+        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -859,26 +896,29 @@ const jsrepl = {};
             h("div.repl-log-output", content)
         );
 
-        this.applyCurrentFiltersTo(elem);
+        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
     log.prototype.result = function (result) {
-        if (result === "") {
-            return;
-        }
 
         let resultText = h("div.repl-result-text", "");
         resultText.innerHTML = result;
 
+        let klass = (result === undefined) ? "repl-result-undefined" : "repl-result";
+ 
         const elem = h(
-            "div.repl-result",
+            `div.${klass}`,
             h("div.repl-result-prompt", jsrepl.config.resultPrompt),
             resultText
         );
 
-        this.applyCurrentFiltersTo(elem);
+        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
+
+        if (result === undefined) {
+            this.repl.applyCurrentFiltersTo(elem);
+        }
     };
 
     log.prototype.errorResult = function (result) {
@@ -891,7 +931,7 @@ const jsrepl = {};
             resultText
         );
 
-        this.applyCurrentFiltersTo(elem);
+        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -905,7 +945,7 @@ const jsrepl = {};
             resultText
         );
 
-        this.applyCurrentFiltersTo(elem);
+        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
