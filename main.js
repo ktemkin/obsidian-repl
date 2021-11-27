@@ -281,7 +281,7 @@ const jsrepl = {};
         );
 
         window.repl.logArea.appendChild(elem);
-        window.repl.applyCurrentFiltersTo(elem);
+        window.repl.applyCurrentFiltersTo();
     }
 
     repl.doError = function () {
@@ -321,7 +321,6 @@ const jsrepl = {};
     repl.prototype.createView = function () {
         this.logArea = h("div.repl-log-area#repl-log-area", {
             style: { width: this.width },
-            ontouchend:   (e) => this.onTouchEnd(e)
         });
 
         this.prompt = h("div.repl-prompt#repl-prompt", jsrepl.config.prompt);
@@ -331,16 +330,13 @@ const jsrepl = {};
             tabindex: "100",
             onkeypress:   (e) => this.onEditAreaKeyPress(e),
             onkeydown:    (e) => this.onEditAreaKeyDown(e),
-            ontouchstart: (e) => this.onEditTouchStart(e),
-            ontouchend:   (e) => this.onTouchEnd(e)
         });
 
         this.currentArea = h(
             "div#currentArea",
             { 
                 style: { width: "100%", display: "flex" },
-                ontouchstart: (e) => this.onViewTouchStart(e),
-                ontouchend:   (e) => this.onTouchEnd(e)
+                ontouchstart: (e) => this.onViewTouchStart(e)
             },
             this.prompt,
             this.editArea
@@ -358,8 +354,6 @@ const jsrepl = {};
                     width: this.width,
                     height: this.height,
                 },
-                ontouchstart: (e) => this.onTouchStart(e),
-                ontouchend:   (e) => this.onTouchEnd(e)
             },
             this.logArea,
             this.currentArea,
@@ -376,6 +370,8 @@ const jsrepl = {};
     repl.prototype.processCode = function (code) {
         const log = new jsrepl.log(this);
         this.currentLog = log;
+        
+        this.applyCurrentFiltersTo();
 
         log.code(code);
         const [result, isError] = this.evalCode(code);
@@ -522,6 +518,23 @@ const jsrepl = {};
             }
         }
     }
+    
+    repl.prototype._filterBySuccessor = function (selector, should_show, should_hide, root) {
+        root = root || this.root
+        let elements = root.querySelectorAll(selector);
+        
+        for (let element of elements) {
+            if (element.nextElementSibling) {
+                if(element.nextElementSibling.style.visibility != "hidden") {
+                    element.style.height = "auto";
+                    element.style.visibility = "visible";
+                } else {
+                    element.style.height = "0px";
+                    element.style.visibility = "hidden";
+                }
+            }
+        }
+    }
 
     
     repl.prototype._filterBySelectorAndContents =
@@ -531,8 +544,8 @@ const jsrepl = {};
 
         for (let element of elements) {
             if (element.innerText.contains(keyword)) {
-                element.style.height = "auto";
-                element.style.visibility = "visible";
+                //element.style.height = "auto";
+                //element.style.visibility = "visible";
             } else {
                 element.style.height = "0px";
                 element.style.visibility = "hidden";
@@ -606,8 +619,9 @@ const jsrepl = {};
         this._filterBySelectorAndContents(".repl-result-warning", keyword, root);
         this._filterBySelectorAndContents(".repl-console-log", keyword, root);
         this._filterBySelectorAndContents(".repl-console-log", keyword, root);
+        this._filterBySelectorAndContents(".repl-result", keyword, root);
         this._filterBySelectorAndContents(".repl-log-result", keyword, root);
-        this._filterBySelectorAndContents(".repl-log-code", keyword, root);
+        this._filterBySuccessor(".repl-log-code", root);
         this.scrollDown();
     }
     
@@ -619,21 +633,21 @@ const jsrepl = {};
         this._setVisibilityBySelector(".repl-result-warning", true, root);
         this._setVisibilityBySelector(".repl-console-log", true, root);
         this._setVisibilityBySelector(".repl-console-log", true, root);
+        this._setVisibilityBySelector(".repl-result", true, root);
         this._setVisibilityBySelector(".repl-log-result", true, root);
         this._setVisibilityBySelector(".repl-log-code", true, root);
         this.scrollDown();
     };
 
-    repl.prototype.applyCurrentFiltersTo = function(newElement) {
-        // TODO: expand the behavior of this
-        newElement = this.root;
+    repl.prototype.applyCurrentFiltersTo = function() {
+        let newElement = this.root;
 
-        this.filterView(this.activeFilter, newElement);
         this.showLogs(this.showingLogs, newElement);
         this.showWarnings(this.showingWarnings, newElement);
         this.showErrors(this.showingErrors, newElement);
         this.showResults(this.showingResults, newElement);
         this.showUndefineds(this.showingUndefineds, newElement);
+        this.filterView(this.activeFilter, newElement);
     };
 
     repl.prototype.extendConsole = function () {
@@ -767,43 +781,6 @@ const jsrepl = {};
         this.editArea.focus();
     };
 
-    repl.prototype.onEditTouchStart = function(e) {
-        this.xDown = e.touches[0].clientX;                                      
-        this.yDown = e.touches[0].clientY;
-    }
-
-    repl.prototype.onTouchEnd = function(e) {
-
-        if ((this.xDown === undefined)) {
-            return;
-        }
-        if ((this.yDown === undefined)) {
-            return;
-        }
-    
-        let xUp = e.changedTouches[0].clientX;                                    
-        let yUp = e.changedTouches[0].clientY;
-    
-        let linearity = Math.abs(this.xDown - xUp);
-        let yDiff     = this.yDown - yUp
-        let motion    = Math.abs(yDiff);
-
-        xDown = null;
-        yDown = null;        
-                                                                             
-        if (linearity <= jsrepl.config.swipeLinearityThreshold) {
-            if (motion >= jsrepl.config.swipeMotionThreshold) {
-                if (yDiff > 0) {
-                    /* down swipe */ 
-                    console.log("down swipe");
-                } else { 
-                    /* up swipe */
-                    console.log("up swipe");
-                }                 
-            }
-        }
-    }
-    
 
     repl.prototype.onEditAreaKeyDown = function (e) {
         jsrepl.nebug(e);
@@ -893,7 +870,6 @@ const jsrepl = {};
             h("div.repl-code-text", code)
         );
 
-        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -904,29 +880,36 @@ const jsrepl = {};
             h("div.repl-log-output", content)
         );
 
-        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
     log.prototype.result = function (result) {
-
+        let klass =  "repl-result";
         let resultText = h("div.repl-result-text", "");
         resultText.innerHTML = result;
 
-        let klass = (result === undefined) ? "repl-result-undefined" : "repl-result";
- 
+        let visibility = "visible";
+        let height = "auto";
+
+        if (result === undefined) {
+            klass = "repl-result-undefined";
+            visibility = (this.repl.showingUndefineds) ? "visible" : "hidden";
+            height = (this.repl.showingUndefineds) ? "auto" : "0px";
+        }
+
         const elem = h(
             `div.${klass}`,
             h("div.repl-result-prompt", jsrepl.config.resultPrompt),
-            resultText
+            resultText,
+            {
+                style: {
+                    visibility: visibility,
+                    height: height
+                }
+            }
         );
 
-        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
-
-        if (result === undefined) {
-            this.repl.applyCurrentFiltersTo(elem);
-        }
     };
 
     log.prototype.errorResult = function (result) {
@@ -939,7 +922,6 @@ const jsrepl = {};
             resultText
         );
 
-        this.repl.applyCurrentFiltersTo(elem);
         this.repl.logArea.appendChild(elem);
     };
 
@@ -953,7 +935,7 @@ const jsrepl = {};
             resultText
         );
 
-        this.repl.applyCurrentFiltersTo(elem);
+        this.repl.applyCurrentFiltersTo();
         this.repl.logArea.appendChild(elem);
     };
 
