@@ -543,7 +543,15 @@ const jsrepl = {};
         let elements = root.querySelectorAll(selector);
 
         for (let element of elements) {
-            if (element.innerText.contains(keyword)) {
+            let isMatch;
+
+            if (keyword instanceof RegExp) {
+                isMatch = element.innerText.match(keyword)
+            } else {
+                isMatch = element.innerText.contains(keyword)
+            }
+
+            if (isMatch) {
                 //element.style.height = "auto";
                 //element.style.visibility = "visible";
             } else {
