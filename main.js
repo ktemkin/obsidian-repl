@@ -519,7 +519,6 @@ const jsrepl = {};
             } else {
                 element.style.height = "0px";
                 element.style.visibility = "hidden";
-                window.coreLog(element);
             }
         }
     }
@@ -626,7 +625,6 @@ const jsrepl = {};
     };
 
     repl.prototype.applyCurrentFiltersTo = function(newElement) {
-
         // TODO: expand the behavior of this
         newElement = this.root;
 
@@ -647,6 +645,16 @@ const jsrepl = {};
         console.showInfo       = this.showInfo.bind(this);
         console.showInfos      = this.showInfo.bind(this);
         console.showResults    = this.showResults.bind(this);
+
+        console.hideUndefineds = this.showUndefineds.bind(this, false);
+        console.hideUndefs     = this.showUndefineds.bind(this, false);
+        console.hideErrors     = this.showErrors.bind(this, false);
+        console.hideWarnings   = this.showWarnings.bind(this, false);
+        console.hideLogs       = this.showLogs.bind(this, false);
+        console.hideInfo       = this.showInfo.bind(this, false);
+        console.hideInfos      = this.showInfo.bind(this, false);
+        console.hideResults    = this.showResults.bind(this, false);
+        
         console.filter         = this.filterView.bind(this);
         console.unfilter       = this.unfilterView.bind(this);
     }
