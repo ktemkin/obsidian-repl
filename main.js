@@ -831,8 +831,7 @@ const jsrepl = {};
         jsrepl.nebug(e.keyCode);
         jsrepl.nebug(e.key);
 
-        // If we get a enter + shift, create a newline.
-        if (e.key == "Enter") {
+        if (e.key == "Enter" && !e.shiftKey) {
             this.handleEnterKey(e);
         } else if (e.key == "c") {
             if (e.ctrlKey) {
