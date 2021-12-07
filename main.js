@@ -243,13 +243,32 @@ const jsrepl = {};
         let formatString    = args[0];
         const formatPattern = RegExp("%[.0]?[0-9]*[oOdisf]")
 
-        // Search for replacement patterns for each argument.
-        for (let i = 1; i < args.length; ++i) {
-            let replacement = args[i];
-            formatString = formatString.replace(formatPattern, replacement);
+        // If this looks like it's using printf-style matching,
+        // use this as a formatting string.
+        // TODO: this heuristic may not be right
+        if (formatString.match(formatPattern)) {
+
+            // Search for replacement patterns for each argument.
+            for (let i = 1; i < args.length; ++i) {
+                let replacement = args[i];
+                formatString = formatString.replace(formatPattern, replacement);
+            }
+
+            return formatString;
+        }
+        // Otherwise, this is likely just multiple lines of output.
+        // Join them together.
+        else {
+            let result = args[0];
+
+            // Argument collections don't have `join`. :(
+            for (let i = 1; i < args.length; ++i) {
+                result += `\n${args[i]}`;
+            }
+
+            return result;
         }
 
-        return formatString;
     }
 
     repl.doLogging = function () {
