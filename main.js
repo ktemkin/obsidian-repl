@@ -243,6 +243,11 @@ const jsrepl = {};
         let formatString    = args[0];
         const formatPattern = RegExp("%[.0]?[0-9]*[oOdisf]")
 
+        // If we can't handle this, pass it through exactly.
+        if (formatString.match == undefined) {
+            return args;
+        }
+
         // If this looks like it's using printf-style matching,
         // use this as a formatting string.
         // TODO: this heuristic may not be right
