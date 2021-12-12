@@ -459,7 +459,7 @@ const jsrepl = {};
     if (this.toolbar && !app.isMobile) {
       paddingBottom = "32px";
     } else if (app.isMobile) {
-      paddingBottom = "30pt";
+      //paddingBottom = "10pt";
     }
 
     // HyperScript Notation

@@ -200,7 +200,7 @@ div.obsidian-repl {
 
 #repl-toolbar {
   position: fixed;
-  bottom: 30pt;
+  bottom: 20pt;
   width: 100%;
   height: 30px;
   padding-top: 3px;
