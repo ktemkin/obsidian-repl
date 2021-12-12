@@ -423,6 +423,22 @@ const jsrepl = {};
   //
   // Main UI.
   //
+  repl.prototype.getMobileToolbarPadding = function () {
+    const toolbarPluginName = "advanced-toolbar";
+
+    if (app.plugins.enabledPlugins.has(toolbarPluginName)) {
+      const toolbarPlugin = app.plugins.getPlugin(toolbarPluginName);
+      const toolbarAlwaysShown = toolbarPlugin.settings.alwaysShowToolbar;
+
+      if (toolbarAlwaysShown) {
+        const numRows = toolbarPlugin.settings.rowCount;
+        const rowHeight = toolbarPlugin.settings.rowHeight;
+        return numRows * rowHeight;
+      }
+    }
+
+    return 0;
+  };
 
   repl.prototype.createView = function () {
     this.logArea = h("div.repl-log-area#repl-log-area", {
@@ -459,7 +475,10 @@ const jsrepl = {};
     if (this.toolbar && !app.isMobile) {
       paddingBottom = "32px";
     } else if (app.isMobile) {
-      //paddingBottom = "10pt";
+      // On mobile, we'll want to override the root style, rather than
+      // the style of the local plugin.
+      paddingBottom = this.getMobileToolbarPadding();
+      this.root.style.paddingBottom = "42px";
     }
 
     // HyperScript Notation
