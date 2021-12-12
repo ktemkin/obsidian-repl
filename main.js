@@ -375,6 +375,36 @@ const jsrepl = {};
       ),
       h("span.repl-spacer"),
       h(
+        "a.repl-button.wide",
+        {
+          onclick: (e) => {
+            this.editArea.innerText += ".";
+            this.setCaretAtEnd();
+          },
+        },
+        "."
+      ),
+      h(
+        "a.repl-button.wide",
+        {
+          onclick: (e) => {
+            this.editArea.innerText += "[";
+            this.setCaretAtEnd();
+          },
+        },
+        "["
+      ),
+      h(
+        "a.repl-button.wide",
+        {
+          onclick: (e) => {
+            this.editArea.innerText += "]";
+            this.setCaretAtEnd();
+          },
+        },
+        "]"
+      ),
+      h(
         "a.repl-button#repl-newline-button",
         {
           onclick: (e) => {
@@ -429,7 +459,7 @@ const jsrepl = {};
     if (this.toolbar && !app.isMobile) {
       paddingBottom = "32px";
     } else if (app.isMobile) {
-      paddingBottom = "60pt";
+      paddingBottom = "30pt";
     }
 
     // HyperScript Notation

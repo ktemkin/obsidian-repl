@@ -200,7 +200,7 @@ div.obsidian-repl {
 
 #repl-toolbar {
   position: fixed;
-  bottom: 40pt;
+  bottom: 30pt;
   width: 100%;
   height: 30px;
   padding-top: 3px;
@@ -227,6 +227,7 @@ div.obsidian-repl {
   background-color: var(--background-secondary-alt);
 }
 
+.repl-button.wide,
 #repl-clear-tab-button,
 #repl-newline-button {
   padding: 0.25em 0.75em;
