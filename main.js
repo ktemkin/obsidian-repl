@@ -203,6 +203,7 @@ const jsrepl = {};
     this.prompt = null;
     this.editArea = null;
     this.paddingArea = null;
+    this.toolbar = null;
 
     this.currentLog = null;
 
@@ -214,7 +215,11 @@ const jsrepl = {};
   jsrepl.repl = repl;
 
   repl.prototype.init = function () {
+    if (app.isMobile) {
+      this.createToolbar();
+    }
     this.createView();
+
     this.isClearing = false;
 
     this.showingLogs = true;
@@ -346,6 +351,49 @@ const jsrepl = {};
     3 + WrOnG;
   };
 
+  //
+  // TOOLBAR STUFF
+  //
+
+  repl.prototype.createToolbar = function () {
+    // Create a button that triggers tab completion on mobile.
+
+    // Create a button that clears tab completion on mobile.
+    // Create our toolbar.
+    this.toolbar = h(
+      "div.repl-toolbar#repl-toolbar",
+      {},
+      h(
+        "a.repl-button#repl-tab-button",
+        { onclick: (e) => this.handleTabCompletion(false, true) },
+        "➟"
+      ),
+      h(
+        "a.repl-button#repl-clear-tab-button",
+        { onclick: (e) => this.clearTabSuggestions() },
+        "✖"
+      ),
+      h("span.repl-spacer"),
+      h(
+        "a.repl-button#repl-newline-button",
+        {
+          onclick: (e) => {
+            this.editArea.innerText += "\n";
+            this.setCaretAtEnd();
+          },
+        },
+        "↲"
+      )
+    );
+
+    // Finally, squish it into our DOM.
+    this.root.appendChild(this.toolbar);
+  };
+
+  //
+  // Main UI.
+  //
+
   repl.prototype.createView = function () {
     this.logArea = h("div.repl-log-area#repl-log-area", {
       style: { width: this.width },
@@ -375,6 +423,15 @@ const jsrepl = {};
       style: { display: "block" },
     });
 
+    // Figure out how to handle bottom spacing to avoid
+    // our toolbar.
+    let paddingBottom = "";
+    if (this.toolbar && !app.isMobile) {
+      paddingBottom = "32px";
+    } else if (app.isMobile) {
+      paddingBottom = "60pt";
+    }
+
     // HyperScript Notation
     this.view = h(
       "div.repl-viewport#repl-viewport",
@@ -382,6 +439,7 @@ const jsrepl = {};
         style: {
           width: this.width,
           height: this.height,
+          paddingBottom: paddingBottom,
         },
       },
       this.logArea,
@@ -882,13 +940,12 @@ const jsrepl = {};
   //
   // Handle tab completion.
   //
-  repl.prototype.handleTabCompletion = function (shiftHeld) {
+  repl.prototype.handleTabCompletion = function (shiftHeld, fromButton) {
     let context;
 
     const currentText = this.editArea.innerText;
 
-    if (currentText === this.lastSuggestionText) {
-      coreLog("focusing?");
+    if (!fromButton && currentText === this.lastSuggestionText) {
       this.focusFirstTabSuggestion(shiftHeld);
       return;
     }
