@@ -926,6 +926,8 @@ const jsrepl = {};
     else {
       this.displayTabSuggestions(candidates, stem);
       this.lastSuggestionText = currentText;
+      this.lastContextText = contextText;
+      this.lastOperator = operator;
     }
   };
 
@@ -1084,7 +1086,32 @@ const jsrepl = {};
   };
 
   repl.prototype.presumeSuggestion = function (suggestionElement) {
-    this.editArea.innerText = suggestionElement.dataset.suggestion;
+    let contextText = this.lastContextText;
+
+    if (contextText && this.lastSuggestionText) {
+      const contextIsWindow = contextText.startsWith("window");
+      const userHadWindow = this.lastSuggestionText.startsWith("window");
+
+      // Special case behavior for things that start with window.
+      // We can leave off the "window." without changing anything; so
+      // we'll try to match what the user had typed.
+      if (contextIsWindow && !userHadWindow) {
+        // Trim out the unnecessary "window".
+        if (contextText == "window") {
+          contextText = "";
+        } else {
+          contextText = contextText.replace(/^window\./, "");
+        }
+      }
+    } else {
+      contextText = "";
+    }
+
+    // Use a dot to connect iff we have a previous element.
+    let operator = contextText ? "." : "";
+
+    this.editArea.innerText =
+      contextText + operator + suggestionElement.dataset.suggestion;
     this.setCaretAtEnd();
     suggestionElement.focus();
   };
@@ -1209,9 +1236,7 @@ const jsrepl = {};
     this.editArea.focus();
   };
 
-  repl.prototype.onEditAreaFocus = function (e) {
-    console.log(e);
-  };
+  repl.prototype.onEditAreaFocus = function (e) {};
 
   // FIXME: should this be keyup?
   repl.prototype.onEditAreaKeyDown = function (e) {
