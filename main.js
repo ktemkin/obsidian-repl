@@ -477,7 +477,6 @@ const jsrepl = {};
     } else if (app.isMobile) {
       // On mobile, we'll want to override the root style, rather than
       // the style of the local plugin.
-      paddingBottom = this.getMobileToolbarPadding();
       this.root.style.paddingBottom = "42px";
     }
 
@@ -986,8 +985,20 @@ const jsrepl = {};
     return ["window", ".", lastPhrase];
   };
 
+  repl.prototype.getTabCompletionsForObject = function (obj) {
+    let candidates = Object.getOwnPropertyNames(obj);
+
+    for (let candidate in obj) {
+      if (!candidates.contains(candidate)) {
+        candidates.push(candidate);
+      }
+    }
+
+    return candidates;
+  };
+
   //
-  // Handle tab completion.
+  // Handle tab completion
   //
   repl.prototype.handleTabCompletion = function (shiftHeld, fromButton) {
     let context;
@@ -1015,14 +1026,8 @@ const jsrepl = {};
 
     // Otherwise, our completion candidates are all of the keys
     // in our context object.
-    let candidates = [];
-    let potentialCandidates = Object.getOwnPropertyNames(context);
-
-    for (let potentialCandidate of potentialCandidates) {
-      if (potentialCandidate.startsWith(stem)) {
-        candidates.push(potentialCandidate);
-      }
-    }
+    const potentialCandidates = this.getTabCompletionsForObject(context);
+    let candidates = potentialCandidates.filter((c) => c.startsWith(stem));
 
     // If we have exactly one candidate, accept it as a completion.
     if (candidates.length === 1) {
