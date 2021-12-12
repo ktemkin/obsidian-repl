@@ -97,7 +97,7 @@ div.obsidian-repl {
 	font-family: var(--font-monospace);
 }
 
-.repl-console-log {
+.repl-console-log:not(:empty) {
 	border-bottom: 1px solid #222;
 }
 
@@ -138,6 +138,34 @@ div.obsidian-repl {
 	border-bottom: 1px solid rgb(84, 12, 6);
 }
 
+
+.repl-suggestions {
+	padding-top: 10px;
+	border-bottom: 1px solid #222;
+	border-top: 1px solid #222;
+}
+
+.repl-suggestions a {
+	text-decoration: none;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+.repl-suggestions .no-suggestions {
+	color: var(--text-faint);
+	text-align: center;
+}
+
+.repl-suggestions a:focus {
+	background-color: var(--text-selection);
+	color: var(--text-on-accent);
+	font-weight: bold;
+}
+
+.repl-suggestions .repl-result-prompt {
+	display: none;
+}
+
 .repl-console-warning,
 .repl-result-warning,
 .repl-result-warning-inner {
@@ -147,7 +175,7 @@ div.obsidian-repl {
 	border-bottom: 1px solid rgb(99, 85, 23);
 }
 
-.repl-result .repl-result-prompt,
+.repl-result .repl-result-prompt, .repl-suggestion,
 .repl-result-undefined .repl-result-prompt,
 .repl-result-error .repl-result-prompt,
 .repl-console-error .repl-console-prompt,
@@ -162,4 +190,9 @@ div.obsidian-repl {
 
 .repl-inner-result a {
 	font-size: 10px;
+}
+
+
+.repl-inner-result {
+	margin: 0px;
 }
