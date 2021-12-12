@@ -27,7 +27,7 @@ const jsrepl = {};
   config.warningPrompt = "⚠️";
   config.keyboardPaddingPx = 0;
 
-  config.suggestionLimit = 20;
+  config.suggestionLimit = 28;
 
   config.debug = false;
 } // namespace boundary
@@ -391,85 +391,99 @@ const jsrepl = {};
 
     // Add a hook to the body's event listener, so we can detect tabs.
     document.body.addEventListener("keyup", (e) => {
-
       // Handle TAB presses; which we'll use for our suggestion engine.
       if (e.key == "Tab") {
-
         if (!e.target) {
-            return;
+          return;
         }
 
         // If we're targeting the edit area, use this
         // for tab completion.
-        if(e.target == this.editArea) {
-            this.handleTabCompletion(e.shiftKey);
-            return;
+        if (e.target == this.editArea) {
+          this.handleTabCompletion(e.shiftKey);
+          return;
         }
 
         // If we're targeting one of our suggestions,
         // cycle through them.
         if (this.isTabSuggestion(e.target)) {
-            this.handleTabSuggestionCycle(e.target, e.shiftKey);
-            return;
+          this.handleTabSuggestionCycle(e.target, e.shiftKey);
+          return;
         }
-
       }
 
       // If we get an ESC key, we'll do some special actions.
       if (e.key == "Escape") {
         // If we're targeting the edit area, drop the
         // existing set of tab suggestions.
-        if(e.target == this.editArea) {
-            this.clearTabSuggestions();
-            return;
+        if (e.target == this.editArea) {
+          this.clearTabSuggestions();
+          return;
         }
 
         // If we're targeting one of our suggestions,
         // drop our presumption of it.
         if (this.isTabSuggestion(e.target)) {
-            this.dropPresumption();
-            return;
+          this.dropPresumption();
+          return;
         }
+      }
+
+      //
+      // If we get a CTRL + L to our EditArea, clear it.
+      //
+      // I never user this, so at least one person should know how much
+      // I love her.~
+      //
+      if (e.key == "l" && e.ctrlKey && e.target == this.editArea) {
+        clear();
+        e.preventDefault();
+        return;
       }
 
       // If we're addressing a keypress to a TabSuggestion other
       // than a TAB or ESC, we'll accept the suggestion and pass
       // the event through to our editArea.
       if (this.isTabSuggestion(e.target)) {
-          this.acceptPresumption();
+        this.acceptPresumption();
 
-          // FIXME: this can't be right
-          if (e.key.length == "1") {
-              this.editArea.innerText += e.key;
-          }
+        // FIXME: this can't be right
+        if (e.key.length == "1") {
+          this.editArea.innerText += e.key;
+        }
 
-          // Create a synthetic variant of this event, and
-          // pass it to the editArea.
-          let eventData = {
-              key: e.key,
-              code: e.code,
-              location: e.location,
-              shiftKey: e.shiftKey,
-              altKey: e.altKey,
-              ctrlKey: e.ctrlKey,
-              metaKey: e.metaKey
-          }
+        // Create a synthetic variant of this event, and
+        // pass it to the editArea.
+        let eventData = {
+          key: e.key,
+          code: e.code,
+          location: e.location,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+        };
 
-          let proxyEventDown = new KeyboardEvent("keydown", e);
-          let proxyEventUp = new KeyboardEvent("keyup", e);
-          this.editArea.dispatchEvent (proxyEventDown);
-          this.editArea.dispatchEvent (proxyEventUp);
+        let proxyEventDown = new KeyboardEvent("keydown", e);
+        let proxyEventUp = new KeyboardEvent("keyup", e);
+        this.editArea.dispatchEvent(proxyEventDown);
+        this.editArea.dispatchEvent(proxyEventUp);
 
-          this.setCaretAtEnd();
+        this.setCaretAtEnd();
       }
 
+      // Finally, if we're touching our edit area in any other way,
+      // this should clear our suggestions.
+      if (e.target === this.editArea && this.lastSuggestionText) {
+        this.clearTabSuggestions();
+      }
     });
 
     this.root.appendChild(this.view);
   };
 
   repl.prototype.scrollDown = function () {
-    this.container.scrollTo(0, this.container.scrollHeight);
+    this.root.scrollTo(0, this.root.scrollHeight);
   };
 
   repl.prototype.processCode = function (code) {
@@ -509,36 +523,34 @@ const jsrepl = {};
     return new Option(text).innerHTML;
   };
 
-  repl.prototype.formatArray = function(obj, pathToObject) {
-
+  repl.prototype.formatArray = function (obj, pathToObject) {
     // Coalesce each piece of the array into a printable form.
     let toPrint = Object.entries(obj).map((pairs) => {
-        const [key, value] = pairs;
+      const [key, value] = pairs;
 
-        if (this.printAsObject(value)) {
-            let encodedKey = this.escapeHTML(key);
-            let innerJs = `repl.editArea.innerText = '${pathToObject}[${encodedKey}]'; repl.handleEnterKey(); void(0)`;
-            return `<a href="javascript: ${innerJs}">${value}</a>`;
-        } else {
-            return this.escapeHTML(value);
-        }
+      if (this.printAsObject(value)) {
+        let encodedKey = this.escapeHTML(key);
+        let innerJs = `repl.editArea.innerText = '${pathToObject}[${encodedKey}]'; repl.handleEnterKey(); void(0)`;
+        return `<a href="javascript: ${innerJs}">${value}</a>`;
+      } else {
+        return this.escapeHTML(value);
+      }
     });
 
     return `[${toPrint.join(", ")}]`;
-  }
+  };
 
   repl.prototype.formatObject = function (obj, pathToObject) {
-
     // Special cases for null and undefined.
     if (obj === null) {
       return "<em>null</em>";
     } else if (obj === undefined) {
       return "<em>undefined</em>";
     }
-    
+
     // Special cases for arrays.
     if (obj instanceof Array) {
-        return this.formatArray(obj, pathToObject);
+      return this.formatArray(obj, pathToObject);
     }
 
     // Otherwise, this is an object.
@@ -626,7 +638,6 @@ const jsrepl = {};
     code = this.demangleCode(code);
 
     try {
-
       // Note: the (0,eval) changes the eval semantics, because
       // JS gives special meaning to eval called under the global name eval,
       // as opposed to any other reference. We want this to act in the global
@@ -877,9 +888,9 @@ const jsrepl = {};
     const currentText = this.editArea.innerText;
 
     if (currentText === this.lastSuggestionText) {
-        coreLog("focusing?");
-        this.focusFirstTabSuggestion(shiftHeld);
-        return;
+      coreLog("focusing?");
+      this.focusFirstTabSuggestion(shiftHeld);
+      return;
     }
 
     const [contextText, operator, stem] =
@@ -910,68 +921,74 @@ const jsrepl = {};
     // If we have exactly one candidate, accept it as a completion.
     if (candidates.length === 1) {
       this.insertTabCompletion(candidates.first(), stem);
-    } 
+    }
     // Otherwise, display a list of tab suggestions.
     else {
       this.displayTabSuggestions(candidates, stem);
       this.lastSuggestionText = currentText;
     }
-
   };
 
-  
   repl.prototype.displayTabSuggestions = function (candidates, stem) {
+    // Clear any existing suggestions.
+    this.clearTabSuggestions();
 
-      // Clear any existing suggestions.
-      this.clearTabSuggestions();
+    // FIXME: move me to somewhere else; this is silly
+    // leftover oddness from base code.
+    if (!this.currentLog) {
+      this.currentLog = new jsrepl.log(this);
+    }
 
-      // FIXME: move me to somewhere else; this is silly
-      // leftover oddness from base code.
-      if(!this.currentLog) {
-         this.currentLog = new jsrepl.log(this);
-      }
-      
-      // Special case: if we have no suggestions, indicate so.
-      if (candidates.length == 0) {
-          /**
-           * Uncomment this if you're the kind of sadist who puts the
-           * bell (or visual bell) on in your terminal to let you know
-           * about failed suggestion attempts. But, seriously, what?
-           */
-          /*
-          this.currentLog.result(
+    // Special case: if we have no suggestions, indicate so.
+    if (candidates.length == 0) {
+      /**
+       * Uncomment this if you're the kind of sadist who puts the
+       * bell (or visual bell) on in your terminal to let you know
+       * about failed suggestion attempts. But, seriously, what?
+       */
+      /*
+          this.currentLog.suggestions(
               '<em class="no-suggestions">No suggestions.</em>',
-              "repl-suggestions", 
-              "");
+              );
           */
-          return;
-      }
+      return;
+    }
 
-      // Limit ourselves to a fixed number of suggestions...
-      const truncatedCandidates = candidates.slice(0, jsrepl.config.suggestionLimit);
+    // Limit ourselves to a fixed number of suggestions...
+    const truncatedCandidates = candidates.slice(
+      0,
+      jsrepl.config.suggestionLimit
+    );
+    const wasTruncated = truncatedCandidates.length != candidates.length;
 
-      // ... format those suggestions...
-      let formattedCandidates = truncatedCandidates.map((candidate) =>{
-            let formatted = candidate.replace(stem, `<u><b>${stem}</b></u>`)
-            let innerJs = `repl.insertTabCompletion('${candidate}', '${stem}', true); void(0);`;
+    // ... format those suggestions...
+    let formattedCandidates = truncatedCandidates.map((candidate) => {
+      let formatted = candidate.replace(stem, `<u><b>${stem}</b></u>`);
+      let innerJs = `repl.insertTabCompletion('${candidate}', '${stem}', true); void(0);`;
 
-            // I _think_ we can get away with not escaping these, since the candidates can from an interface where quotes are invalid.
-            return `<a class="repl-suggestion" data-suggestion="${candidate}" href="javascript: ${innerJs}">${formatted}</a>`;
-          });
-        
+      // I _think_ we can get away with not escaping these, since the candidates can from an interface where quotes are invalid.
+      return `<a class="repl-suggestion" data-suggestion="${candidate}" href="javascript: ${innerJs}">${formatted}</a>`;
+    });
 
-      // Finally, print out the candidates.
-      this.currentLog.result(formattedCandidates.join("\t"), "repl-suggestions", "");
-  }
-  
+    // If this was truncated, add a indicator.
+    if (wasTruncated) {
+      const remaining = candidates.length - truncatedCandidates.length;
+
+      formattedCandidates.push(
+        `<span class="faint">[... ${remaining} omitted.]<span>`
+      );
+    }
+
+    // Finally, print out the candidates.
+    this.currentLog.suggestions(formattedCandidates.join("\t"));
+  };
 
   //
   // Returns true iff the given element is a REPL tab suggestion.
   //
   repl.prototype.isTabSuggestion = function (element) {
-
     if (element === null) {
-        return false;
+      return false;
     }
 
     if (!element.classList) {
@@ -979,57 +996,54 @@ const jsrepl = {};
     }
 
     return element.classList.contains("repl-suggestion");
-  }
-  
+  };
 
   //
   // Cycles to the next tab suggestion, if possible.
   //
   repl.prototype.handleTabSuggestionCycle = function (currentElement, reverse) {
-
     let nextElement;
 
     if (reverse) {
-        nextElement = currentElement.previousElementSibling;
+      nextElement = currentElement.previousElementSibling;
     } else {
-        nextElement = currentElement.nextElementSibling;
+      nextElement = currentElement.nextElementSibling;
     }
 
     // Case 1: we have additional suggestions to cycle through.
     // In this case, the next element should be another suggestion.
     if (this.isTabSuggestion(nextElement)) {
-
-        // In this case, we'll just focus that element.
-        this.presumeSuggestion(nextElement);
-
+      // In this case, we'll just focus that element.
+      this.presumeSuggestion(nextElement);
     }
 
     // Case 2: we're out of suggestions; focus our text editor.
     else {
-        this.dropPresumption();
+      this.dropPresumption();
     }
-
-  }
-
+  };
 
   //
   // Inserts a tab completion into our console.
   //
-  repl.prototype.insertTabCompletion = function (completion, stem, acceptPresumes) {
-
+  repl.prototype.insertTabCompletion = function (
+    completion,
+    stem,
+    acceptPresumes
+  ) {
     // If we're presuming a completion, already, we'll just accept it.
-    if (acceptPresumes && (this.lastSuggestionText != this.editArea.innerText)) {
-        this.editArea.focus();
-    } 
+    if (acceptPresumes && this.lastSuggestionText != this.editArea.innerText) {
+      this.editArea.focus();
+    }
     // Otherwise, we'll need to fill in the tab completion.
     else {
-        // Remove the stem from our completion, so we have just the part
-        // that needs adding. This is a single replace, and the string should
-        // have been conditioned such that this always will work.
-        const completionToAdd = completion.replace(stem, "");
+      // Remove the stem from our completion, so we have just the part
+      // that needs adding. This is a single replace, and the string should
+      // have been conditioned such that this always will work.
+      const completionToAdd = completion.replace(stem, "");
 
-        // Stick the remainder on our text...
-        this.editArea.innerText += completionToAdd;
+      // Stick the remainder on our text...
+      this.editArea.innerText += completionToAdd;
     }
 
     // ... clear any existing suggestions ...
@@ -1042,58 +1056,52 @@ const jsrepl = {};
   //
   // Clears any tab suggestion nodes that have been generated.
   //
-  repl.prototype.clearTabSuggestions = function() {
+  repl.prototype.clearTabSuggestions = function () {
     let elements = this.root.querySelectorAll(".repl-suggestions");
     for (let element of elements) {
-        element.remove();
+      element.remove();
     }
 
     this.lastSuggestionText = null;
-  }
+  };
 
   //
   // Focuses the first tab suggestion; for use with tab cycling.
   //
-  repl.prototype.focusFirstTabSuggestion = function(reverse) {
+  repl.prototype.focusFirstTabSuggestion = function (reverse) {
     let elements = this.root.querySelectorAll(".repl-suggestions a");
     let element;
 
     if (reverse) {
-        element = elements[elements.length - 1];
+      element = elements[elements.length - 1];
     } else {
-        element = elements[0];
+      element = elements[0];
     }
 
     if (element) {
-        this.presumeSuggestion(element);
+      this.presumeSuggestion(element);
     }
+  };
 
-  }
-
-  repl.prototype.presumeSuggestion = function(suggestionElement) {
+  repl.prototype.presumeSuggestion = function (suggestionElement) {
     this.editArea.innerText = suggestionElement.dataset.suggestion;
     this.setCaretAtEnd();
     suggestionElement.focus();
-  }
+  };
 
-  repl.prototype.dropPresumption = function() {
+  repl.prototype.dropPresumption = function () {
     this.editArea.innerText = this.lastSuggestionText;
     this.editArea.focus();
     this.setCaretAtEnd();
-  }
+  };
 
-  
-  repl.prototype.acceptPresumption = function() {
+  repl.prototype.acceptPresumption = function () {
     this.clearTabSuggestions();
     this.editArea.focus();
     this.setCaretAtEnd();
-  }
+  };
 
-  repl.prototype.acceptSuggestionAndProxyEvent = function(e) {
-
-  }
-  
-
+  repl.prototype.acceptSuggestionAndProxyEvent = function (e) {};
 } // namespace boundary
 
 {
@@ -1298,9 +1306,15 @@ const jsrepl = {};
     this.repl.logArea.appendChild(elem);
   };
 
-  log.prototype.result = function (result, klass, prompt) {
+  log.prototype.suggestions = function (suggestions) {
+    this.result(suggestions, "repl-suggestions", "", this.repl.view);
+    this.repl.scrollDown();
+  };
+
+  log.prototype.result = function (result, klass, prompt, container) {
     klass = klass || "repl-result";
-    prompt = (prompt === undefined) ? jsrepl.config.resultPrompt : prompt;
+    container = container || this.repl.logArea;
+    prompt = prompt === undefined ? jsrepl.config.resultPrompt : prompt;
     let resultText = h("div.repl-result-text", "");
     resultText.innerHTML = result;
 
@@ -1325,7 +1339,7 @@ const jsrepl = {};
       }
     );
 
-    this.repl.logArea.appendChild(elem);
+    container.appendChild(elem);
   };
 
   log.prototype.errorResult = function (result) {
