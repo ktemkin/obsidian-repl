@@ -27,7 +27,7 @@ const jsrepl = {};
   config.warningPrompt = "⚠️";
   config.keyboardPaddingPx = 0;
 
-  config.suggestionLimit = 28;
+  config.suggestionLimit = 15;
 
   config.debug = false;
 } // namespace boundary
