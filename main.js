@@ -1150,13 +1150,24 @@ const jsrepl = {};
     }
     // Otherwise, we'll need to fill in the tab completion.
     else {
-      // Remove the stem from our completion, so we have just the part
-      // that needs adding. This is a single replace, and the string should
-      // have been conditioned such that this always will work.
-      const completionToAdd = completion.replace(stem, "");
+      // If our suggestion has invalid characters, we'll need to use
+      // bracket notation instead of dot notation.
+      if (this.suggestionHasInvalidChars(completion)) {
+        const [prefix, operator, capturedStem] = this.splitCompletionComponents(
+          this.editArea.innerText
+        );
 
-      // Stick the remainder on our text...
-      this.editArea.innerText += completionToAdd;
+        // Fill out our innerText with a bracketed completion.
+        this.editArea.innerText = prefix + '["' + completion + '"]';
+      } else {
+        // Remove the stem from our completion, so we have just the part
+        // that needs adding. This is a single replace, and the string should
+        // have been conditioned such that this always will work.
+        const completionToAdd = completion.replace(stem, "");
+
+        // Stick the remainder on our text...
+        this.editArea.innerText += completionToAdd;
+      }
     }
 
     // ... clear any existing suggestions ...
@@ -1196,8 +1207,14 @@ const jsrepl = {};
     }
   };
 
+  repl.prototype.suggestionHasInvalidChars = function (suggestion) {
+    return suggestion.contains("-");
+  };
+
   repl.prototype.presumeSuggestion = function (suggestionElement) {
     let contextText = this.lastContextText;
+    let suggestion = suggestionElement.dataset.suggestion;
+    let useBrackets = this.suggestionHasInvalidChars(suggestion);
 
     if (contextText && this.lastSuggestionText) {
       const contextIsWindow = contextText.startsWith("window");
@@ -1206,7 +1223,7 @@ const jsrepl = {};
       // Special case behavior for things that start with window.
       // We can leave off the "window." without changing anything; so
       // we'll try to match what the user had typed.
-      if (contextIsWindow && !userHadWindow) {
+      if (contextIsWindow && !userHadWindow && !useBrackets) {
         // Trim out the unnecessary "window".
         if (contextText == "window") {
           contextText = "";
@@ -1218,11 +1235,18 @@ const jsrepl = {};
       contextText = "";
     }
 
-    // Use a dot to connect iff we have a previous element.
-    let operator = contextText ? "." : "";
+    // If we're using brackets, have this be a string inside them.
+    if (useBrackets) {
+      this.editArea.innerText = contextText + '["' + suggestion + '"]';
+    }
+    // Otherwise, just squish our suggestion onto the end.
+    else {
+      // Use a dot to connect iff we have a previous element.
+      let operator = contextText ? "." : "";
 
-    this.editArea.innerText =
-      contextText + operator + suggestionElement.dataset.suggestion;
+      this.editArea.innerText = contextText + operator + suggestion;
+    }
+
     this.setCaretAtEnd();
     suggestionElement.focus();
   };
