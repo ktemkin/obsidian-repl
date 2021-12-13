@@ -449,6 +449,9 @@ const jsrepl = {};
 
     this.editArea = h("div.repl-edit-area#repl-edit-area", {
       contentEditable: true,
+      autocomplete: "off",
+      autocorrect: "off",
+      autocapitalize: "none",
       tabindex: "100",
       onkeypress: (e) => this.onEditAreaKeyPress(e),
       onkeydown: (e) => this.onEditAreaKeyDown(e),
