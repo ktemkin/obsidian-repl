@@ -208,13 +208,11 @@ const jsrepl = {};
     this.currentLog = null;
 
     this.history = null;
-
-    this.init();
   };
 
   jsrepl.repl = repl;
 
-  repl.prototype.init = function () {
+  repl.prototype.init = async function () {
     if (app.isMobile) {
       this.createToolbar();
     }
@@ -595,7 +593,7 @@ const jsrepl = {};
     this.root.scrollTo(0, this.root.scrollHeight);
   };
 
-  repl.prototype.processCode = function (code) {
+  repl.prototype.processCode = async function (code) {
     const log = new jsrepl.log(this);
     this.currentLog = log;
 
@@ -603,7 +601,7 @@ const jsrepl = {};
     this.applyCurrentFiltersTo();
 
     log.code(code);
-    const [result, isError] = this.evalCode(code);
+    const [result, isError] = await this.evalCode(code);
 
     // This logic is wrong, but it's quick to write and
     // simulates a thing. Fix it later.
@@ -740,19 +738,14 @@ const jsrepl = {};
     return code;
   };
 
-  repl.prototype.evalCode = function (code) {
+  repl.prototype.evalCode = async function (code) {
     let result;
     let isError = false;
 
     code = this.demangleCode(code);
 
     try {
-      // Note: the (0,eval) changes the eval semantics, because
-      // JS gives special meaning to eval called under the global name eval,
-      // as opposed to any other reference. We want this to act in the global
-      // scope, rather than binding to our function scope; so we have to call
-      // it with a reference, rather than the global name eval.
-      result = (0, eval)(code);
+      result = await this.doEval(code);
 
       if (this.printAsObject(result)) {
         // FIXME: do pathToObject sanely
@@ -767,6 +760,23 @@ const jsrepl = {};
 
     return [result, isError];
   };
+
+  repl.prototype.doEval = async function(code) {
+    if (code.contains("async") || code.contains("await")) {
+      return this.doRawEval(`(async () => { return ${code} })()`);
+    } else {
+      return Promise.resolve(this.doRawEval(code));
+    }
+  }
+
+  repl.prototype.doRawEval = function (code) {
+    // Note: the (0,eval) changes the eval semantics, because
+    // JS gives special meaning to eval called under the global name eval,
+    // as opposed to any other reference. We want this to act in the global
+    // scope, rather than binding to our function scope; so we have to call
+    // it with a reference, rather than the global name eval.
+    return (0, eval)(code);
+  }
 
   repl.prototype._setVisibilityBySelector = function (
     selector,
@@ -1408,13 +1418,13 @@ const jsrepl = {};
     }
   };
 
-  repl.prototype.onEditAreaKeyPress = function (e) {
+  repl.prototype.onEditAreaKeyPress = async function (e) {
     jsrepl.nebug(e);
     jsrepl.nebug(e.keyCode);
     jsrepl.nebug(e.key);
 
     if (e.key == "Enter" && !e.shiftKey) {
-      this.handleEnterKey(e);
+      await this.handleEnterKey(e);
     } else if (e.key == "c") {
       if (e.ctrlKey) {
         this.handleCancel();
@@ -1422,14 +1432,14 @@ const jsrepl = {};
     }
   };
 
-  repl.prototype.handleEnterKey = function (event) {
+  repl.prototype.handleEnterKey = async function (event) {
     const code = this.editArea.innerText;
 
     if (event !== undefined) {
       event.preventDefault();
     }
 
-    this.processCode(code);
+    await this.processCode(code);
   };
 } // namespace boundary
 
@@ -1585,6 +1595,7 @@ class ReplView extends obsidian.ItemView {
 
     // .. and squish our REPL into it.
     window.repl = new jsrepl.repl(element);
+    await window.repl.init();
   }
 }
 
