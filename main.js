@@ -247,6 +247,11 @@ const jsrepl = {};
     let formatString = args[0];
     const formatPattern = RegExp("%[.0]?[0-9]*[oOdisf]");
 
+    // If the value is nullish, return.
+    if (formatString === null || formatString === undefined) {
+      return args;
+    }
+
     // If we can't handle this, pass it through exactly.
     if (formatString.match == undefined) {
       return args;
