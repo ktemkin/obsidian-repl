@@ -1588,7 +1588,7 @@ class ReplView extends obsidian.ItemView {
     return "Console";
   }
   getIcon() {
-    return "feather-terminal";
+    return "terminal";
   }
   onClose() {}
   async onOpen() {
@@ -1609,7 +1609,7 @@ class ObsidianRepl extends obsidian.Plugin {
     this.registerView(VIEW_TYPE_REPL, (leaf) => new ReplView(leaf));
 
     // FIXME: remove
-    this.addRibbonIcon("feather-terminal", "Open Console", () => {
+    this.addRibbonIcon("terminal", "Open Console", () => {
       this.activateView();
     });
   }
